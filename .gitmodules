@@ -1,0 +1,3 @@
+[submodule "student-portal"]
+	path = student-portal
+	url = https://github.com/wessleynyakaz/student-portal.git
