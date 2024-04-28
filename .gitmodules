@@ -4,3 +4,6 @@
 [submodule "teacher-portal"]
 	path = teacher-portal
 	url = https://github.com/wessleynyakaz/teacher-portal.git
+[submodule "accounts-portal"]
+	path = accounts-portal
+	url = https://github.com/wessleynyakaz/accounts-portal.git

@@ -1,5 +1,3 @@
-Here is a sample README.md file for the School Portal directory:
-
 # School Portal
 
 The School Portal is a comprehensive web application that serves as a centralized platform for managing various aspects of a school's operations, including student and teacher portals, library management, and more.
