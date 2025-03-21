@@ -1,0 +1,9 @@
+# Ignore the .gitmodules file
+.gitmodules
+
+# Ignore submodule directories
+student-portal/
+teacher-portal/
+accounts-portal/
+admin-portal/
+file_server/
