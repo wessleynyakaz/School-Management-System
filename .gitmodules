@@ -10,3 +10,6 @@
 [submodule "admin-portal"]
 	path = admin-portal
 	url = https://github.com/wessleynyakaz/admin-portal.git
+[submodule "file_server"]
+	path = file_server
+	url = https://github.com/wessleynyakaz/file_server.git
