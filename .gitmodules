@@ -7,3 +7,6 @@
 [submodule "accounts-portal"]
 	path = accounts-portal
 	url = https://github.com/wessleynyakaz/accounts-portal.git
+[submodule "admin-portal"]
+	path = admin-portal
+	url = https://github.com/wessleynyakaz/admin-portal.git
