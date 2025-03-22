@@ -1,0 +1,30 @@
+{
+  "name": "shared-db",
+  "version": "1.0.0",
+  "description": "Shared database for the management system.",
+  "main": "index.js",
+  "scripts": {
+    "schema_format": "prisma format",
+    "migrate": "prisma migrate deploy",
+    "seed": "prisma db seed",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^22.13.11",
+    "prisma": "^6.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.5.0",
+    "@types/bcrypt": "^5.0.2",
+    "bcrypt": "^5.1.1"
+  }
+}

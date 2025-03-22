@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String
+  expires      DateTime
+  user         user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+model Resource {
+  id          String       @id @unique
+  title       String
+  category    String
+  type        String
+  description String
+  isFavorite  Boolean      @default(false)
+  bookmarked  Boolean      @default(false)
+  link        String
+  Assignment  Assignment[]
+}
+
+model Assignment {
+  id            String     @id @unique
+  title         String
+  date          DateTime   @default(now())
+  due           DateTime
+  grade         String?
+  comment       String?
+  submission    Json?
+  submittedDate DateTime?
+  daysTook      Int?
+  status        Boolean    @default(false)
+  overdue       Boolean    @default(false)
+  completed     Boolean    @default(false)
+  description   String
+  attachments   String[]
+  students      user[]
+  resources     Resource[]
+}
+
+model Book {
+  id               String        @id @unique
+  name             String
+  image            String
+  available        Boolean       @default(true)
+  count            Int
+  languages        String[]
+  readers          user[]        @relation("borrowedBooks")
+  potentialReaders user[]        @relation("pendingBooks")
+  BookHistroy      BookHistroy[]
+}
+
+model Report {
+  id           String   @id @default(cuid())
+  date         DateTime @default(now())
+  subject      String
+  acquiredMark Int
+  fullMark     Int
+  comment      String
+  user         user     @relation(fields: [userId], references: [id])
+  userId       String
+}
+
+model Chart {
+  id           String    @id @default(cuid())
+  heading      String
+  messages     Message[] // Define a separate Message model
+  unread       Boolean   @default(true)
+  archived     Boolean   @default(false)
+  participants user[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  timestamp DateTime @default(now()) // Include a timestamp for each message
+  chart     Chart    @relation(fields: [chartId], references: [id])
+  chartId   String
+  sender    user     @relation(fields: [senderId], references: [id])
+  senderId  String
+}
+
+model user {
+  id            String        @id @default(cuid())
+  first_name    String
+  initial       String
+  last_name     String
+  gender        String
+  religion      String
+  d_o_b         DateTime
+  address       String
+  id_no         String
+  parent_id     Int?
+  parent        parent?       @relation(fields: [parent_id], references: [id])
+  image         String?
+  password      String
+  email         String        @unique
+  last_login    DateTime?
+  pendingBooks  Book[]        @relation("pendingBooks")
+  borrowedBooks Book[]        @relation("borrowedBooks")
+  reports       Report[]
+  accounts      Account[]
+  sessions      Session[]
+  bookHistory   BookHistroy[]
+  assignments   Assignment[]
+  charts        Chart[]
+  messages       Message[]
+}
+
+model BookHistroy {
+  id       String   @id @unique
+  user     user     @relation(fields: [userId], references: [id])
+  book     Book     @relation(fields: [bookId], references: [id])
+  userId   String
+  bookId   String
+  period   Int
+  borrowed DateTime
+  returned DateTime
+}
+
+model parent {
+  id           Int       @id @default(autoincrement())
+  password     String
+  last_login   DateTime?
+  last_name    String
+  first_name   String
+  religion     String
+  address      String
+  id_no        String
+  profile_pic  Bytes?
+  gender       String
+  email        String    @unique
+  passing_year String?
+  occupation   String
+  contact      String?
+  children     user[]
+}
+
+model Events {
+  id          String   @id @default(cuid())
+  name        String
+  date        DateTime
+  theme       String
+  description String
+}

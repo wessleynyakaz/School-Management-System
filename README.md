@@ -59,3 +59,51 @@ Alternatively, you can clone the repository along with its submodules in one ste
 ```bash
 git clone --recurse-submodules <repository-url>
 ```
+
+## Development Setup
+
+For local development:
+
+1. Make sure PostgreSQL is installed and running
+2. Run the development setup script:
+
+```bash
+chmod +x dev-setup.sh
+./dev-setup.sh
+```
+
+This script will:
+
+- Set up the shared database
+- Generate Prisma client
+- Start the file server for file storage
+- Start the student portal development server
+
+## Deployment
+
+### Using Docker Compose
+
+To deploy the entire application with Docker Compose:
+
+1. Create a `.env` file with your configuration:
+
+```
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=securepassword
+POSTGRES_DB=schoolportal
+NEXTAUTH_SECRET=yoursecretkey
+NEXTAUTH_URL=https://your-domain.com
+```
+
+2. Build and start all services:
+
+```bash
+docker-compose up -d
+```
+
+3. Access the different portals at:
+   - Student Portal: http://localhost:3000
+   - Teacher Portal: http://localhost:3001
+   - Accounts Portal: http://localhost:3002
+   - Admin Portal: http://localhost:8000
+   - File Server: http://localhost:8001

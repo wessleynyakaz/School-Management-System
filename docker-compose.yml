@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-schoolportal}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - school-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  
+  db-init:
+    build:
+      context: ./shared-db
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-schoolportal}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - school-network
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed"
+  
+  file-server:
+    build:
+      context: ./file_server
+    environment:
+      POSTGRES_NAME: ${POSTGRES_DB:-schoolportal}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      DEBUG: ${DEBUG:-False}
+    volumes:
+      - file-storage:/app/media
+    ports:
+      - "8001:8000"
+    depends_on:
+      - db-init
+    networks:
+      - school-network
+  
+  student-portal:
+    build:
+      context: ./student-portal
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-schoolportal}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-schoolportalsecretkey}
+      FILE_SERVER_URL: http://file-server:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db-init
+      - file-server
+    networks:
+      - school-network
+
+networks:
+  school-network:
+
+volumes:
+  postgres-data:
+  file-storage:
