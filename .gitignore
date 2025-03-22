@@ -1,6 +1,6 @@
 # Ignore the .gitmodules file
 .gitmodules
-
+.env
 # Ignore submodule directories
 student-portal/
 teacher-portal/
