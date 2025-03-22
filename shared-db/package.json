@@ -6,6 +6,7 @@
   "scripts": {
     "schema_format": "prisma format",
     "migrate": "prisma migrate deploy",
+    "db visual": "prisma studio",
     "seed": "prisma db seed",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -25,6 +26,8 @@
   "dependencies": {
     "@prisma/client": "^6.5.0",
     "@types/bcrypt": "^5.0.2",
-    "bcrypt": "^5.1.1"
+    "axios": "^1.8.4",
+    "bcrypt": "^5.1.1",
+    "date-fns": "^4.1.0"
   }
 }

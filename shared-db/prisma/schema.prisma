@@ -3,161 +3,60 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String  @map("provider_account_id")
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+// CORE MODELS
 
-  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
+model Student {
+  id                        String                      @id @default(cuid())
+  first_name                String
+  initial                   String
+  last_name                 String
+  title                     String?
+  gender                    String
+  religion                  String
+  d_o_b                     DateTime
+  address                   String
+  id_no                     String
+  parent_id                 Int?
+  parent                    Parent?                     @relation(fields: [parent_id], references: [id])
+  image                     String?
+  password                  String
+  email                     String                      @unique
+  last_login                DateTime?
+  attendence                Attendance[]
+  pendingBooks              Book[]                      @relation("pendingBooks")
+  borrowedBooks             BorrowedBookData[]
+  reports                   Report[]
+  assignments               Assignment[]
+  charts                    Chart[]
+  private_messages          PrivateMessage[]
+  live_messages             LiveMessage[]
+  live_classes              LiveClass[]
+  notices                   Notice[]
+  complaints                Complaint[]
+  petitions                 Petition[]
+  Petition_slips            PetitionSlip[]
+  subjectAttendence         SubjectAttendence[]
+  test_marks                ClassTestMark[]
+  assignment_submissions    AssignmentSubmission[]
+  ClassRoom                 ClassRoom?                  @relation(fields: [classRoomId], references: [id])
+  classRoomId               String?
+  careerId                  String?
+  careerPath                Career?                     @relation(fields: [careerId], references: [id])
+  CareerPathQuizAnswerSheet CareerPathQuizAnswerSheet[]
+  CareerRecommendation      CareerRecommendation[]
+  StudentGeneralSettings    StudentGeneralSettings[]
+  StudentPrefSettings       StudentPrefSettings[]
+  StudentAccSettings        StudentAccSettings?
+  TwoFactorAuth             TwoFactorAuth[]
+  StudentNotifSettings      StudentNotifSettings?
+  notifications             Notification[]
 }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique @map("session_token")
-  userId       String
-  expires      DateTime
-  user         user     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-  @@map("verificationtokens")
-}
-
-model Resource {
-  id          String       @id @unique
-  title       String
-  category    String
-  type        String
-  description String
-  isFavorite  Boolean      @default(false)
-  bookmarked  Boolean      @default(false)
-  link        String
-  Assignment  Assignment[]
-}
-
-model Assignment {
-  id            String     @id @unique
-  title         String
-  date          DateTime   @default(now())
-  due           DateTime
-  grade         String?
-  comment       String?
-  submission    Json?
-  submittedDate DateTime?
-  daysTook      Int?
-  status        Boolean    @default(false)
-  overdue       Boolean    @default(false)
-  completed     Boolean    @default(false)
-  description   String
-  attachments   String[]
-  students      user[]
-  resources     Resource[]
-}
-
-model Book {
-  id               String        @id @unique
-  name             String
-  image            String
-  available        Boolean       @default(true)
-  count            Int
-  languages        String[]
-  readers          user[]        @relation("borrowedBooks")
-  potentialReaders user[]        @relation("pendingBooks")
-  BookHistroy      BookHistroy[]
-}
-
-model Report {
-  id           String   @id @default(cuid())
-  date         DateTime @default(now())
-  subject      String
-  acquiredMark Int
-  fullMark     Int
-  comment      String
-  user         user     @relation(fields: [userId], references: [id])
-  userId       String
-}
-
-model Chart {
-  id           String    @id @default(cuid())
-  heading      String
-  messages     Message[] // Define a separate Message model
-  unread       Boolean   @default(true)
-  archived     Boolean   @default(false)
-  participants user[]
-}
-
-model Message {
-  id        String   @id @default(cuid())
-  content   String
-  timestamp DateTime @default(now()) // Include a timestamp for each message
-  chart     Chart    @relation(fields: [chartId], references: [id])
-  chartId   String
-  sender    user     @relation(fields: [senderId], references: [id])
-  senderId  String
-}
-
-model user {
-  id            String        @id @default(cuid())
-  first_name    String
-  initial       String
-  last_name     String
-  gender        String
-  religion      String
-  d_o_b         DateTime
-  address       String
-  id_no         String
-  parent_id     Int?
-  parent        parent?       @relation(fields: [parent_id], references: [id])
-  image         String?
-  password      String
-  email         String        @unique
-  last_login    DateTime?
-  pendingBooks  Book[]        @relation("pendingBooks")
-  borrowedBooks Book[]        @relation("borrowedBooks")
-  reports       Report[]
-  accounts      Account[]
-  sessions      Session[]
-  bookHistory   BookHistroy[]
-  assignments   Assignment[]
-  charts        Chart[]
-  messages       Message[]
-}
-
-model BookHistroy {
-  id       String   @id @unique
-  user     user     @relation(fields: [userId], references: [id])
-  book     Book     @relation(fields: [bookId], references: [id])
-  userId   String
-  bookId   String
-  period   Int
-  borrowed DateTime
-  returned DateTime
-}
-
-model parent {
+model Parent {
   id           Int       @id @default(autoincrement())
   password     String
   last_login   DateTime?
@@ -172,7 +71,18 @@ model parent {
   passing_year String?
   occupation   String
   contact      String?
-  children     user[]
+  children     Student[]
+}
+
+model Teacher {
+  id          String      @id @default(cuid())
+  first_name  String
+  last_name   String
+  image       String?
+  password    String
+  email       String      @unique
+  liveClasses LiveClass[]
+  subjects    Subject[]
 }
 
 model Events {
@@ -181,4 +91,496 @@ model Events {
   date        DateTime
   theme       String
   description String
+}
+
+model Book {
+  id               String             @id @unique
+  name             String
+  image            String
+  available        Boolean            @default(true)
+  count            Int
+  languages        String[]
+  potentialReaders Student[]          @relation("pendingBooks")
+  readers          BorrowedBookData[]
+}
+
+model Term {
+  id         String       @id @default(cuid())
+  num        Int
+  startDate  DateTime
+  endDate    DateTime
+  schoolDays Int
+  attendance Attendance[]
+  reports    Report[]
+}
+
+model ClassRoom {
+  id                    String                 @id @default(cuid())
+  name                  String
+  students              Student[]
+  assignments           Assignment[]
+  reports               Report[]
+  assignmentSubmissions AssignmentSubmission[]
+}
+
+// SECURITY
+
+model TwoFactorAuth {
+  studentId   String  @id
+  twoFaSecret String
+  student     Student @relation(fields: [studentId], references: [id])
+}
+
+// ACADEMIC MODELS
+
+model LiveClass {
+  id           String        @id @default(cuid())
+  name         String
+  subject      Subject       @relation(fields: [subjectId], references: [id])
+  subjectId    String
+  teacher      Teacher       @relation(fields: [teacherId], references: [id])
+  teacherId    String
+  description  String
+  attachments  String[]
+  startDate    DateTime
+  endDate      DateTime
+  tests        ClassTest[]
+  participants Student[]
+  messages     LiveMessage[]
+}
+
+enum AssignmentStatus {
+  SUBMITTED
+  OVERDUE
+  MARKED
+  DUE
+}
+
+model Assignment {
+  id          String                 @id @unique
+  title       String
+  description String
+  issuedDate  DateTime               @default(now())
+  dueDate     DateTime
+  subjectId   String
+  classroomId String
+  classroom   ClassRoom              @relation(fields: [classroomId], references: [id])
+  subject     Subject                @relation(fields: [subjectId], references: [id])
+  submissions AssignmentSubmission[]
+  attachments String[]
+  students    Student[]
+  resources   Resource[]
+  notices     Notice[]
+}
+
+model AssignmentSubmission {
+  id           String           @id @default(cuid())
+  studentId    String
+  assignmentId String
+  documents    String[]
+  grade        String?
+  comment      String?
+  daysTook     Int?
+  status       AssignmentStatus @default(DUE)
+  modifiedAt   DateTime         @default(now())
+  submittedAt  DateTime         @default(now())
+  student      Student          @relation(fields: [studentId], references: [id])
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id])
+  ClassRoom    ClassRoom?       @relation(fields: [classRoomId], references: [id])
+  classRoomId  String?
+
+  @@unique([assignmentId, studentId])
+}
+
+model ClassTest {
+  id        String          @id @default(cuid())
+  date      DateTime
+  outOf     Int
+  subject   Subject         @relation(fields: [subjectId], references: [id])
+  subjectId String
+  klass     LiveClass[]
+  marks     ClassTestMark[]
+}
+
+model ClassTestMark {
+  id        String    @id @default(cuid())
+  student   Student   @relation(fields: [studentId], references: [id])
+  studentId String
+  test      ClassTest @relation(fields: [testId], references: [id])
+  testId    String
+  mark      Int
+  comment   String?
+}
+
+model Subject {
+  id           String              @id @default(cuid())
+  name         String
+  teacher      Teacher             @relation(fields: [teacherId], references: [id])
+  teacherId    String
+  tests        ClassTest[]
+  classes      LiveClass[]
+  assignements Assignment[]
+  attendencies SubjectAttendence[]
+}
+
+model ReportEntry {
+  id           String @id @default(cuid())
+  subject      String
+  acquiredMark Int
+  fullMark     Int
+  comment      String
+  report       Report @relation(fields: [reportId], references: [id])
+  reportId     String
+}
+
+model Report {
+  id          String        @id @default(cuid())
+  termId      String
+  studentId   String
+  classRoomId String?
+  entries     ReportEntry[]
+  term        Term          @relation(fields: [termId], references: [id])
+  student     Student       @relation(fields: [studentId], references: [id])
+  ClassRoom   ClassRoom?    @relation(fields: [classRoomId], references: [id])
+}
+
+// COMMUNICATION MODELS
+
+model Chart {
+  id           String           @id @default(cuid())
+  heading      String?
+  messages     PrivateMessage[]
+  unread       Boolean          @default(true)
+  archived     Boolean          @default(false)
+  participants Student[]
+}
+
+model PrivateMessage {
+  id        String   @id @default(cuid())
+  content   String
+  timestamp DateTime @default(now()) // Include a timestamp for each message
+  chart     Chart    @relation(fields: [chartId], references: [id])
+  chartId   String
+  sender    Student  @relation(fields: [senderId], references: [id])
+  senderId  String
+}
+
+model LiveMessage {
+  id         String    @id @default(cuid())
+  content    String
+  timestamp  DateTime  @default(now()) // Include a timestamp for each message
+  class      LiveClass @relation(fields: [classId], references: [id])
+  classId    String
+  sender     Student   @relation(fields: [senderId], references: [id])
+  senderId   String
+  senderName String
+}
+
+// LIBRARY MODELS
+
+model BorrowedBookData {
+  id        String    @id @default(cuid())
+  student   Student   @relation(fields: [studentId], references: [id])
+  studentId String
+  book      Book      @relation(fields: [bookId], references: [id])
+  bookId    String
+  borrowed  DateTime  @default(now())
+  returned  DateTime?
+  // The amount of days on should stay witha borrowed book
+  days      Int       @default(3)
+}
+
+model Resource {
+  id          String       @id @unique
+  title       String
+  category    String
+  type        String
+  description String
+  isFavorite  Boolean      @default(false)
+  bookmarked  Boolean      @default(false)
+  link        String
+  Assignment  Assignment[]
+}
+
+// PETITION AND COMPLAINTS MODELS
+
+model Petition {
+  id            String         @id @default(cuid())
+  description   String
+  mobilizer     Student        @relation(fields: [mobilizerId], references: [id])
+  mobilizerId   String
+  issuedDate    DateTime       @default(now())
+  submittedDate DateTime?
+  status        Status?
+  ballot        PetitionSlip[]
+}
+
+enum Vote {
+  AGREE
+  DISAGREE
+  NEUTRAL
+}
+
+model PetitionSlip {
+  id        String   @id @default(cuid())
+  vote      Vote     @default(NEUTRAL)
+  votedAt   DateTime @default(now())
+  voter     Student  @relation(fields: [voterId], references: [id])
+  petition  Petition @relation(fields: [petitioId], references: [id])
+  voterId   String
+  petitioId String
+
+  // one vote for each Student per each petition
+  @@unique([voterId, petitioId])
+}
+
+enum LocationOfIncident {
+  Hallway
+  School_Grounds
+  School_DOM
+  School_Dining_Hall
+  School_ClassRoom
+  Outside_School_Grounds
+}
+
+model MethodOfResolution {
+  id         String      @id @default(cuid())
+  name       String
+  Complaints Complaint[]
+}
+
+model Complaint {
+  id                      String             @id @default(cuid())
+  description             String
+  involved_individuals    String?
+  supportingDocumentation String[]
+  issuedDate              DateTime?
+  date_of_incident        DateTime
+  any_witnesses           Boolean            @default(false)
+  status                  Status?
+  locationOfIncident      LocationOfIncident
+  methodOfResolution      MethodOfResolution @relation(fields: [methodOfResolutionId], references: [id])
+  methodOfResolutionId    String
+  issuer                  Student            @relation(fields: [issuerId], references: [id])
+  issuerId                String
+}
+
+// ATTENDANCE MODELS
+
+enum AttendanceStatus {
+  present
+  absent
+  absentE
+  tardy
+  tardyE
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  date      DateTime         @unique
+  status    AttendanceStatus
+  student   Student          @relation(fields: [studentId], references: [id])
+  studentId String
+  term      Term             @relation(fields: [termId], references: [id])
+  termId    String
+}
+
+model SubjectAttendence {
+  id        String   @id @default(cuid())
+  record    Boolean
+  takenAt   DateTime @default(now())
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  subjectId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  studentId String
+}
+
+enum NoticeType {
+  ANNOUNCEMENT
+  ASSIGNMENT
+}
+
+model Notice {
+  id           String      @id @default(cuid())
+  student      Student     @relation(fields: [studentId], references: [id])
+  studentId    String
+  type         NoticeType  @default(ANNOUNCEMENT)
+  message      String
+  issued       DateTime    @default(now())
+  issuer_image String?
+  assignment   Assignment? @relation(fields: [asgnId], references: [id])
+  asgnId       String?
+}
+
+enum Status {
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+}
+
+// Career Models
+
+model CareerTestimonial {
+  id       String  @id @default(cuid())
+  quote    String
+  name     String
+  company  String
+  careerId String?
+  career   Career? @relation(fields: [careerId], references: [id])
+}
+
+model CareerRequirement {
+  id     String   @id @default(cuid())
+  degree String?
+  oLevel String[]
+  aLevel String[]
+  career Career[]
+}
+
+enum CareerCategory {
+  SCIENCES
+  ARTS
+  COMMERCIALS
+}
+
+model CareerPathQuizQuestionAnswer {
+  id                       String                 @id @default(cuid())
+  text                     String
+  skills                   String[]
+  characteristics          String[]
+  careerPathQuizQuestionId String
+  CareerPathQuizQuestion   CareerPathQuizQuestion @relation(fields: [careerPathQuizQuestionId], references: [id])
+}
+
+model CareerPathQuizQuestion {
+  id               String                         @id @default(cuid())
+  question         String
+  answers          CareerPathQuizQuestionAnswer[]
+  careerPathQuizId String?
+  careerPathQuiz   CareerPathQuiz?                @relation(fields: [careerPathQuizId], references: [id])
+  attemptAnswers   CareerPathQuizAttemptAnswer[]
+}
+
+model CareerPathQuiz {
+  id        String                   @id @default(cuid())
+  questions CareerPathQuizQuestion[]
+}
+
+model CareerPathQuizAttemptAnswer {
+  id                          String                     @id @default(cuid())
+  answers                     String[]
+  CareerPathQuizQuestionId    String
+  CareerPathQuizQuestion      CareerPathQuizQuestion?    @relation(fields: [CareerPathQuizQuestionId], references: [id])
+  CareerPathQuizAnswerSheet   CareerPathQuizAnswerSheet? @relation(fields: [careerPathQuizAnswerSheetId], references: [id])
+  careerPathQuizAnswerSheetId String?
+}
+
+model CareerPathQuizAnswerSheet {
+  id                 String                        @id @default(cuid())
+  studentId          String                        @unique
+  student            Student                       @relation(fields: [studentId], references: [id])
+  answers            CareerPathQuizAttemptAnswer[]
+  recommendedCareers CareerRecommendation[]
+
+  @@unique([id, studentId])
+}
+
+model Career {
+  id                   String                 @id @default(cuid())
+  title                String
+  description          String
+  requirementId        String
+  incentives           String[]
+  jobListings          String[]
+  skills               String[]
+  characteristics      String[]
+  category             CareerCategory
+  enrolledStudents     Student[]
+  testimonials         CareerTestimonial[]
+  requirement          CareerRequirement      @relation(fields: [requirementId], references: [id])
+  CareerRecommendation CareerRecommendation[]
+}
+
+model CareerRecommendation {
+  id                        String                      @id @default(cuid())
+  score                     Int // Add a score field to store the recommendation score
+  studentId                 String
+  careerId                  String
+  careerPathQuizAnswerSheet CareerPathQuizAnswerSheet[]
+  student                   Student                     @relation(fields: [studentId], references: [id])
+  career                    Career                      @relation(fields: [careerId], references: [id])
+}
+
+enum SupportedLanguage {
+  ENGLISH
+  FRENCH
+  SPANISH
+}
+
+enum SupportedTimezone {
+  EST
+  CST
+  PST
+}
+
+model StudentGeneralSettings {
+  studentId   String            @id @unique
+  student     Student           @relation(fields: [studentId], references: [id])
+  displayName String?
+  timezone    SupportedTimezone @default(CST)
+  language    SupportedLanguage @default(ENGLISH)
+  timestamp   DateTime          @default(now())
+}
+
+enum ColorMode {
+  DARK
+  LIGHT
+}
+
+enum NotificationFreq {
+  INSTANT
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model StudentPrefSettings {
+  studentId        String           @id @unique
+  student          Student          @relation(fields: [studentId], references: [id])
+  colorMode        ColorMode        @default(LIGHT)
+  notificationFreq NotificationFreq @default(INSTANT)
+  liveClassBadges  Boolean          @default(false)
+  handle           String
+  timestamp        DateTime         @default(now())
+}
+
+model StudentAccSettings {
+  studentId              String   @id @unique
+  student                Student  @relation(fields: [studentId], references: [id])
+  twoFactorAuth          Boolean  @default(false)
+  securityQuestions      String[]
+  passwordExpiry         Int // days
+  accountLockoutAttempts Int
+  accountLockoutDuration Int // minutes
+  timestamp              DateTime @default(now())
+}
+
+model StudentNotifSettings {
+  studentId            String         @id @unique
+  student              Student        @relation(fields: [studentId], references: [id])
+  notificationSound    String
+  bannerStyle          String
+  priorityLevelsHigh   Boolean
+  priorityLevelsMedium Boolean
+  priorityLevelsLow    Boolean
+  snoozeTime           Int
+  timestamp            DateTime       @default(now())
+}
+
+model Notification {
+  id                   String                 @id @default(cuid())
+  studentId                     String                @unique
+  student                       Student               @relation(fields: [studentId], references: [id])
+  message                       String
+  timestamp                     DateTime              @default(now())
 }

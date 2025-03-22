@@ -1,6 +1,11 @@
+import { addDays, format } from 'date-fns'
 import { prisma } from './prisma'
+import { AssignmentStatus } from '@prisma/client'
 
-export async function createAssignments() {
+export async function createAssignments(
+    subj_ids: string[],
+    classRoomId: string,
+) {
     // Create resources
     const resources = await prisma.resource.createMany({
         data: [
@@ -57,62 +62,83 @@ export async function createAssignments() {
     })
 
     // Create assignments
+    const currentDate = new Date()
+    const daysToAdd = Math.floor(Math.random() * 6) + 2 // Randomly select a number between 2 and 7
+    const dateForAssignments = addDays(currentDate, daysToAdd)
+
     const assignments = await prisma.assignment.createMany({
         data: [
             {
+                classroomId: classRoomId,
                 id: '1',
                 title: 'Research Paper on Climate Change Adaptation',
-                status: true,
-                completed: true,
-                comment: 'Great Work',
-                daysTook: 1,
-                submittedDate: new Date('2023-12-05'),
-                date: new Date('2023-12-04'),
-                due: new Date('2024-01-10'),
+                subjectId: subj_ids[2],
+                issuedDate: new Date(format(dateForAssignments, 'yyyy-MM-dd')),
+                dueDate: new Date(
+                    format(addDays(dateForAssignments, 10), 'yyyy-MM-dd'),
+                ),
                 description:
                     'Write a research paper exploring the challenges and opportunities for climate change adaptation in coastal communities.',
             },
             {
+                classroomId: classRoomId,
                 id: '2',
-                title: 'Economics Presentation on Market Structures',
-                overdue: true,
-                date: new Date('2023-12-01'),
-                due: new Date('2023-12-03'),
-                status: false,
+                title: 'Create a Django Project',
+                subjectId: subj_ids[0],
+                issuedDate: new Date(
+                    format(addDays(currentDate, -4), 'yyyy-MM-dd'),
+                ),
+                dueDate: new Date(
+                    format(addDays(currentDate, -2), 'yyyy-MM-dd'),
+                ),
                 description:
-                    'Prepare a presentation discussing different market structures and their implications for businesses and consumers.',
+                    'Make an eCommerce website that can be used to sell cellphones',
             },
             {
+                classroomId: classRoomId,
                 id: '3',
                 title: 'Art History Essay on Renaissance Masterpieces',
-
-                date: new Date('2023-12-20'),
-                due: new Date('2024-01-07'),
-                status: false,
+                subjectId: subj_ids[5],
+                issuedDate: new Date(
+                    format(addDays(currentDate, -15), 'yyyy-MM-dd'),
+                ),
+                dueDate: new Date(
+                    format(addDays(currentDate, 3), 'yyyy-MM-dd'),
+                ),
                 description:
                     'Write an essay analyzing the artistic and cultural significance of selected Renaissance paintings.',
             },
             {
+                classroomId: classRoomId,
                 id: '4',
                 title: 'Nutritional Science Research Project',
-                date: new Date('2023-12-22'),
-                due: new Date('2024-01-09'),
-                status: false,
+                subjectId: subj_ids[3],
+                issuedDate: new Date(
+                    format(addDays(currentDate, -17), 'yyyy-MM-dd'),
+                ),
+                dueDate: new Date(
+                    format(addDays(currentDate, 5), 'yyyy-MM-dd'),
+                ),
                 description:
                     'Conduct a research project on a specific aspect of human nutrition and present your findings in a detailed report.',
             },
             {
+                classroomId: classRoomId,
                 id: '5',
                 title: 'Urban Planning Case Study Analysis',
-
-                date: new Date('2023-12-25'),
-                due: new Date('2024-01-12'),
-                status: false,
+                subjectId: subj_ids[2],
+                issuedDate: new Date(
+                    format(addDays(currentDate, -20), 'yyyy-MM-dd'),
+                ),
+                dueDate: new Date(
+                    format(addDays(currentDate, 8), 'yyyy-MM-dd'),
+                ),
                 description:
                     'Analyze a case study of a sustainable urban planning project and present a comprehensive report on its impact and success factors.',
             },
         ],
     })
+
     for (let i = 0; i < resources.count; i++) {
         await prisma.assignment.update({
             where: {

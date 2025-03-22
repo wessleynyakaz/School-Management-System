@@ -20,23 +20,12 @@ fi
 # Create .env files for each submodule if they don't exist
 echo "Setting up environment variables..."
 
-# Root .env file
-if [ ! -f .env ]; then
-  echo "Creating root .env file..."
-  cat > .env << EOL
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=schoolportal
-NEXTAUTH_SECRET=schoolportalsecretkey
-NEXTAUTH_URL=http://localhost:3000
-EOL
-fi
 
 # Shared DB .env
 if [ ! -f shared-db/.env ]; then
   echo "Creating shared-db .env file..."
   cat > shared-db/.env << EOL
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/schoolportal"
+DATABASE_URL="postgresql://postgres:pos@localhost:5432/schoolportal"
 EOL
 fi
 
@@ -44,23 +33,19 @@ fi
 if [ ! -f student-portal/.env ]; then
   echo "Creating student-portal .env file..."
   cat > student-portal/.env << EOL
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/schoolportal"
+DATABASE_URL="postgresql://postgres:pos@localhost:5432/schoolportal"
 NEXTAUTH_SECRET=schoolportalsecretkey
 NEXTAUTH_URL=http://localhost:3000
 FILE_SERVER_URL=http://localhost:8001
 EOL
 fi
 
-# File Server environment setup
+# File Server environment setup - modified to use SQLite
 if [ ! -f file_server/.env ]; then
   echo "Creating file_server .env file..."
   cat > file_server/.env << EOL
-POSTGRES_NAME=schoolportal
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
 DEBUG=True
+USE_SQLITE=True
 EOL
 fi
 
@@ -72,26 +57,40 @@ if [ -f file_server/file_server/settings.py ]; then
     cp file_server/file_server/settings.py file_server/file_server/settings.py.bak
   fi
   
-  # Update settings to use localhost instead of 'db'
-  sed -i "s/'HOST': 'db'/'HOST': os.environ.get('POSTGRES_HOST', 'localhost')/g" file_server/file_server/settings.py
-  sed -i "s/'HOST': os.environ.get('POSTGRES_HOST', 'db')/'HOST': os.environ.get('POSTGRES_HOST', 'localhost')/g" file_server/file_server/settings.py
 fi
 
-# Initialize shared database
-echo "Setting up shared database..."
-cd shared-db
-npm install
-npx prisma generate
-npx prisma migrate dev --name init
-cd ..
 
-# Install dependencies for file_server
+
+# Install dependencies for file_server and migrate SQLite DB
 echo "Setting up file server..."
 cd file_server
 python3 -m venv venv
 source venv/bin/activate
 python3 -m pip install -r requirements.txt
 pip install psycopg2-binary
+export USE_SQLITE=True
+echo "Resetting the database and migrations..."
+
+# Check if the migrations directory exists before removing it
+if [ -d "api/migrations" ]; then
+    rm -r api/migrations
+    echo "Migrations deleted"
+else
+    echo "Migrations directory does not exist. Skipping removal."
+fi
+
+# Check if the media directory exists before removing it
+if [ -d "media" ]; then
+    rm -r media
+else
+    echo "Media directory does not exist. Skipping removal."
+fi
+
+# Drop and recreate the database
+rm -f db.sqlite3
+python3 manage.py makemigrations
+python3 manage.py makemigrations api
+python3 manage.py migrate
 deactivate
 cd ..
 
@@ -121,22 +120,49 @@ cd ..
 # Start services in background
 echo "Starting services..."
 
+# Check if port 8001 is already in use
+if lsof -Pi :8001 -sTCP:LISTEN -t >/dev/null ; then
+    echo "Port 8001 is already in use. Please free this port before continuing."
+    echo "You can use: sudo kill $(lsof -t -i:8001)"
+    exit 1
+fi
+
 # Start file_server
 cd file_server
 source venv/bin/activate
-python3 manage.py makemigrations
 python3 manage.py migrate
+export DJANGO_DEBUG=True
+export USE_SQLITE=True
 python3 manage.py runserver 0.0.0.0:8001 &
 FILE_SERVER_PID=$!
 cd ..
 
-# seed the database
+echo "Waiting for file server to start..."
+sleep 5
+
+# Initialize shared database
+echo "Setting up shared database..."
 cd shared-db
-npx prisma db seed 
+npm install
+npx prisma generate
+
+# Handle database drift by resetting if needed
+echo "Resetting the database and seeding initial data..."
+npx prisma migrate reset --force || {
+  echo "Failed to reset database. Continuing anyway."
+}
 cd ..
+
+# Check if port 3000 is already in use
+if lsof -Pi :3000 -sTCP:LISTEN -t >/dev/null ; then
+    echo "Port 3000 is already in use. Please free this port before continuing."
+    echo "You can use: sudo kill $(lsof -t -i:3000)"
+    exit 1
+fi
 
 # Start student-portal
 cd student-portal
+npm run genClient
 npm run dev &
 STUDENT_PORTAL_PID=$!
 cd ..

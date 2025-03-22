@@ -1,23 +1,7 @@
-const fs = require('fs')
-const path = require('path')
+import { setBookImage } from './api/setBookImage'
 import { prisma } from './prisma'
 
-// TODO: add legible book images
-
 export async function createBooks() {
-    const imagePath = path.join(__dirname, 'book_img.jpeg')
-    const imageBuffer = fs.readFileSync(imagePath)
-
-    // Create the "images" directory if it doesn't exist
-    const imagesDir = path.join(__dirname, 'images')
-    if (!fs.existsSync(imagesDir)) {
-        fs.mkdirSync(imagesDir)
-    }
-
-    // Store the image on the drive
-    const imageSavePath = path.join(imagesDir, 'book_img.jpeg')
-    fs.writeFileSync(imageSavePath, imageBuffer)
-
     await prisma.book.createMany({
         data: [
             {
@@ -25,14 +9,14 @@ export async function createBooks() {
                 name: 'Pemberton Mathematics',
                 languages: ['English'],
                 count: 4,
-                image: 'book_img.jpeg',
+                image: await setBookImage('1', 'images/books/math.jpeg'),
             },
             {
                 id: '2',
                 name: 'Tri Colore',
                 languages: ['English', 'French'],
                 count: 50,
-                image: 'book_img.jpeg',
+                image: await setBookImage('2', 'images/books/fr.jpeg'),
             },
             {
                 id: '3',
@@ -40,7 +24,7 @@ export async function createBooks() {
                 languages: ['English'],
                 available: false,
                 count: 1,
-                image: 'book_img.jpeg',
+                image: await setBookImage('3', 'images/books/chem.jpeg'),
             },
             {
                 id: '4',
@@ -48,49 +32,49 @@ export async function createBooks() {
                 languages: ['English'],
                 available: false,
                 count: 45,
-                image: 'book_img.jpeg',
+                image: await setBookImage('4', 'images/books/acc.jpeg'),
             },
             {
                 id: '5',
                 name: 'FrankWood Accounting',
                 languages: ['English'],
                 count: 6,
-                image: 'book_img.jpeg',
+                image: await setBookImage('5', 'images/books/frank.jpeg'),
             },
             {
                 id: '6',
                 name: 'Physics Fourth Edition by Tom Duncan',
                 languages: ['English'],
                 count: 2,
-                image: 'book_img.jpeg',
+                image: await setBookImage('6', 'images/books/tom.jpeg'),
             },
             {
                 id: '7',
                 name: 'CPS Agriculture Form 1',
                 languages: ['English'],
                 count: 32,
-                image: 'book_img.jpeg',
+                image: await setBookImage('7', 'images/books/cps.jpeg'),
             },
             {
                 id: '8',
                 name: "RedSpot O'Level English ",
                 languages: ['English'],
                 count: 1,
-                image: 'book_img.jpeg',
+                image: await setBookImage('8', 'images/books/eng.jpeg'),
             },
             {
                 id: '9',
-                name: 'Biology Redspot',
+                name: 'Biology Third Edition',
                 languages: ['English'],
                 count: 1,
-                image: 'book_img.jpeg',
+                image: await setBookImage('9', 'images/books/bio.jpeg'),
             },
             {
                 id: ' 10',
-                name: 'English Redspot ',
+                name: 'Computer Science',
                 languages: ['English'],
                 count: 1,
-                image: 'book_img.jpeg',
+                image: await setBookImage('10', 'images/books/cs.jpeg'),
             },
         ],
     })
