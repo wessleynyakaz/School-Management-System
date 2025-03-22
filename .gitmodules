@@ -10,3 +10,6 @@
 [submodule "file_server"]
 	path = file_server
 	url = https://github.com/wessleynyakaz/file_server.git
+[submodule "student-portal"]
+	path = student-portal
+	url = https://github.com/wessleynyakaz/student-portal.git
