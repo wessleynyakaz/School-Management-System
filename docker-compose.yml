@@ -1,74 +1,134 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:14
+  # Shared database
+  shared-db:
+    build: ./shared-db
+    restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-schoolportal}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_NAME:-school_management}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    networks:
-      - school-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-  
-  db-init:
-    build:
-      context: ./shared-db
+
+  # School Portal (SSO Gateway)
+  school-portal:
+    build: ./school-portal
+    restart: always
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-schoolportal}
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - school-network
-    command: sh -c "npx prisma migrate deploy && npx prisma db seed"
-  
-  file-server:
-    build:
-      context: ./file_server
-    environment:
-      POSTGRES_NAME: ${POSTGRES_DB:-schoolportal}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_HOST: db
-      POSTGRES_PORT: 5432
-      DEBUG: ${DEBUG:-False}
-    volumes:
-      - file-storage:/app/media
-    ports:
-      - "8001:8000"
-    depends_on:
-      - db-init
-    networks:
-      - school-network
-  
-  student-portal:
-    build:
-      context: ./student-portal
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-schoolportal}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-schoolportalsecretkey}
-      FILE_SERVER_URL: http://file-server:8000
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@shared-db:5432/${DB_NAME:-school_management}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-nextauth-secret}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
+      - ADMIN_PORTAL_URL=${ADMIN_PORTAL_URL:-http://admin.schoolname.ac.zw}
+      - TEACHER_PORTAL_URL=${TEACHER_PORTAL_URL:-http://teachers.schoolname.ac.zw}
+      - ACCOUNTS_PORTAL_URL=${ACCOUNTS_PORTAL_URL:-http://accounts.schoolname.ac.zw}
+      - STUDENT_PORTAL_URL=${STUDENT_PORTAL_URL:-http://student.schoolname.ac.zw}
+      - DEV_ADMIN_PORTAL_URL=http://admin-portal:3001
+      - DEV_TEACHER_PORTAL_URL=http://teacher-portal:3002
+      - DEV_ACCOUNTS_PORTAL_URL=http://accounts-portal:3003
+      - DEV_STUDENT_PORTAL_URL=http://student-portal:3004
+      - NODE_ENV=${NODE_ENV:-development}
     ports:
       - "3000:3000"
     depends_on:
-      - db-init
-      - file-server
-    networks:
-      - school-network
+      - shared-db
 
-networks:
-  school-network:
+  # Admin Portal
+  admin-portal:
+    build: ./admin-portal
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@shared-db:5432/${DB_NAME:-school_management}
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
+      - SCHOOL_PORTAL_URL=http://school-portal:3000
+      - NODE_ENV=${NODE_ENV:-development}
+    ports:
+      - "3001:3000"
+    depends_on:
+      - shared-db
+      - school-portal
+
+  # Teacher Portal
+  teacher-portal:
+    build: ./teacher-portal
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@shared-db:5432/${DB_NAME:-school_management}
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
+      - SCHOOL_PORTAL_URL=http://school-portal:3000
+      - NODE_ENV=${NODE_ENV:-development}
+    ports:
+      - "3002:3000"
+    depends_on:
+      - shared-db
+      - school-portal
+
+  # Accounts Portal
+  accounts-portal:
+    build: ./accounts-portal
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@shared-db:5432/${DB_NAME:-school_management}
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
+      - SCHOOL_PORTAL_URL=http://school-portal:3000
+      - NODE_ENV=${NODE_ENV:-development}
+    ports:
+      - "3003:3000"
+    depends_on:
+      - shared-db
+      - school-portal
+
+  # Student Portal
+  student-portal:
+    build: ./student-portal
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@shared-db:5432/${DB_NAME:-school_management}
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
+      - SCHOOL_PORTAL_URL=http://school-portal:3000
+      - NODE_ENV=${NODE_ENV:-development}
+    ports:
+      - "3004:3000"
+    depends_on:
+      - shared-db
+      - school-portal
+
+  # File Server
+  file-server:
+    build: ./file_server
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@shared-db:5432/${DB_NAME:-school_management}
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
+    ports:
+      - "8000:8000"
+    volumes:
+      - file_server_media:/app/media
+    depends_on:
+      - shared-db
+
+  # Nginx Reverse Proxy (for production-like environments)
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - school-portal
+      - admin-portal
+      - teacher-portal
+      - accounts-portal
+      - student-portal
+      - file-server
 
 volumes:
-  postgres-data:
-  file-storage:
+  postgres_data:
+  file_server_media:

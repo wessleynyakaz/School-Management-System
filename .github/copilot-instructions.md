@@ -1,71 +1,98 @@
-Project: Multi-Tenant School Management System
+Project: Minimal Viable Workspace for Multi-Portal School Management System
 
 Overview:
-We are building a multi-tenant School Management System where each school (tenant) can deploy its instance with customized configurations. The underlying code remains unchanged across tenants; however, each client can choose their preferred setup (e.g., login page on the landing page, hosting admin and accounts on private servers, etc.) via external configuration.
+We are building a multi-portal School Management System with the following Next.js apps:
+  - School Portal (Entry-level, handles centralized authentication and token issuance)
+  - Admin Portal
+  - Teacher Portal
+  - Accounts Portal
+  - Student Portal
 
-Architecture:
-1. Shared Codebase:
-   - All tenants use the same code (Next.js apps for student, teachers, accounts, admin, etc.).
-   - The shared-db (PostgreSQL with Prisma) and centralized services remain consistent across deployments.
-   
-2. Tenant-Specific Configuration:
-   - Create a configuration module that loads tenant-specific settings based on the request’s domain or environment variable.
-   - Use a configuration file (or service) that defines tenant-specific options such as:
-     • Whether the landing page includes the login page.
-     • Which portals (admin, accounts, etc.) are hosted on which server/subdomain.
-     • Role-specific settings, UI themes, and any custom endpoints.
-   - Example: For tenant 'ABC School', configuration may indicate:
-         { tenantId: "abc", landingPage: { showLogin: true }, portals: { student: "student.abc.school.ac.zw", teachers: "teachers.abc.school.ac.zw", admin: "admin.abc.school.ac.zw", accounts: "accounts.abc.school.ac.zw" } }
-   - This configuration is injected into the app at runtime, so the same code can be deployed with different behavior.
-
-3. Centralized Authentication and Routing:
-   - Use a central authentication (SSO) service that loads tenant-specific behavior.
-   - On login, the system checks the tenant’s configuration to determine redirection and role-based access.
-   - Next.js middleware (app/middleware.ts) enforces role-based access control, checking the tenant configuration as needed.
-
-4. Docker Deployment for Multi-Tenant Instances:
-   - Each Next.js app (or container) is built once, and configuration is injected via environment variables or a mounted configuration file.
-   - Use a reverse proxy (e.g., Nginx) to direct requests based on the tenant's subdomain.
-   - The same Docker image is deployed for all tenants; behavior is controlled solely by configuration.
-
-Instructions for Copilot:
-- Develop a tenant configuration module (e.g., /config/tenantConfig.ts) that:
-    • Loads a JSON configuration file or reads environment variables.
-    • Determines the tenant based on the domain (e.g., "abc.school.ac.zw" → tenant "abc") and returns configuration options.
-- In the central authentication Next.js app (landing/login page), incorporate this tenant configuration to:
-    • Show or hide the login form based on configuration.
-    • Redirect users to the appropriate subdomains after login based on tenant settings.
-- In each submodule (student, teachers, accounts, admin):
-    • Import the tenant configuration module to adjust behavior (like API endpoints or UI elements) dynamically.
-    • Use Next.js middleware to enforce role-based authorization, taking into account tenant-specific roles if needed.
-- Ensure that the shared-db and centralized Prisma client (located in /prisma) remain unchanged, and all services interact with the same codebase.
-- Create Dockerfiles for each Next.js app and a Docker Compose configuration that:
-    • Passes tenant-specific environment variables into the containers.
-    • Configures a reverse proxy to route requests to the appropriate container based on the subdomain.
-
-- Accounts, admin and teacher portal should share components and they both use the flowbite as the css framework. 
-
-- Commmon utils, hooks and other common files should have a submodule in the root dir
-
-- make sure that the schema and the prisma client is consistent on all submodules and on each change in the schema, changes on the client are made
-
-Final GitHub Copilot Prompt:
-------------------------------------------------------------
-/*
-Project: Multi-Tenant School Management System with Tenant-Specific Configurations
+All apps use Next.js App Router v15, introspect a centralized shared-db via Prisma (models are already set up), and are containerized via Docker. The School Portal acts as the Single Sign-On (SSO) gateway that authenticates users, issues tokens (e.g., JWT), and redirects them to the appropriate subdomain/portal (e.g., student.schoolname.ac.zw, teachers.schoolname.ac.zw, etc.).
 
 Goals:
-1. Build a shared codebase (Next.js apps for student, teachers, accounts, admin) that is multi-tenant.
-2. Create a tenant configuration module (/config/tenantConfig.ts) that loads tenant-specific settings based on the request domain or environment variables.
-3. In the central authentication (SSO) app (landing/login page), use the tenant configuration to:
-    - Determine if the landing page should include the login form.
-    - After successful login, redirect users to their tenant-specific subdomain based on role.
-4. Refactor all submodules to import tenant configuration, so UI elements, API endpoints, and behavior are dynamically set per tenant.
-5. Use Next.js App Router v15 middleware to enforce role-based access control, referencing tenant configurations where necessary.
-6. Create Dockerfiles for each app and a Docker Compose file to deploy them as containers, with environment variables that define tenant-specific configurations.
-7. Ensure that the shared-db (PostgreSQL with Prisma) remains a single source of truth, and that all services use the centralized Prisma client from /prisma/client.ts.
-8. Document how tenant configurations can be updated per school without modifying the codebase.
+1. **School Portal (SSO Gateway)**
+   - Create a Next.js app that displays a landing/login page.
+   - On login, authenticate the user (using NextAuth or custom JWT logic) against the shared-db.
+   - Issue a token and determine the user’s role.
+   - Redirect the user to the correct portal (Admin, Teacher, Accounts, or Student) based on a deployment-specific configuration (mapping roles to subdomains).
+   - Pass the token via URL parameters or secure cookie for further authentication in the destination portal.
 
-Ensure that all these changes allow us to deploy an instance for each school (tenant) where the configuration (e.g., login page behavior, portal hosting) can differ while the core code remains unchanged.
+2. **Individual Portals (Admin, Teacher, Accounts, Student)**
+   - Each portal is a Next.js app that uses a boilerplate already available in our directory structure.
+   - Each app should introspect the current state of the db and use that to generate its prisma client.
+   - Implement Next.js middleware (in app/middleware.ts) to validate the token received from the School Portal, enforce role-based access, and handle any further authentication/authorization logic.
+   - Each portal may further implement its own internal role-based logic (e.g., within the Teacher Portal, differentiate between a head, deputy, or regular teacher).
+
+3. **Dockerization**
+   - Create Dockerfiles for each of the Next.js apps (School Portal, Admin, Teacher, Accounts, Student).
+   - Use a Docker Compose configuration to build and deploy all apps as separate containers.
+   - Each container should receive tenant-specific environment variables (e.g., DATABASE_URL, JWT_SECRET, role-to-subdomain mapping).
+   - Ensure the reverse proxy (or DNS configuration) directs subdomains to the appropriate container (e.g., student.schoolname.ac.zw routes to the Student Portal container).
+
+4. **Token Passing & Environment Configuration**
+   - The School Portal must pass a JWT (or similar token) to the individual portals upon successful login.
+   - The token passing mechanism can be via HTTP redirection with token query parameters or secure cookies.
+   - Each portal’s middleware should validate the token and, if valid, load user details and role-based settings from the shared-db.
+   - The deployment configuration (environment variables or config files) should determine the subdomain mapping (for redirection) so that the logic remains flexible per school instance.
+
+Tasks for GitHub Copilot:
+- **School Portal Setup:**
+  - Scaffold a Next.js app in `/school-portal` that includes a login page.
+  - Implement the authentication API route (using NextAuth or custom JWT logic) to authenticate users against the shared-db.
+  - After login, read the role from the user profile and look up the corresponding subdomain from a configuration (e.g., a JSON file or environment variables).
+  - Redirect the user to the appropriate portal URL, passing along the token.
+  
+- **Individual Portal Setup (Admin, Teacher, Accounts, Student):**
+  - In each app's boilerplate (located in `/admin-portal`, `/teacher-portal`, `/accounts-portal`, `/student-portal`), import the centralized Prisma client from `/prisma/client.ts`.
+  - Set up Next.js middleware in each app (`app/middleware.ts`) to intercept requests and verify the token passed from the School Portal.
+  - Implement role-based checks to ensure that only users with the proper permissions can access specific pages.
+  
+- **Dockerization:**
+  - Create a `Dockerfile` in each portal directory to build the Next.js app.
+  - Write a `docker-compose.yml` in the root directory to spin up all portals as separate containers.
+  - Configure environment variables for each container (DATABASE_URL, JWT_SECRET, SUBDOMAIN_MAPPINGS, etc.).
+  - Optionally, set up an Nginx reverse proxy container that routes requests based on subdomain to the correct Next.js app container.
+  
+- **Documentation & Configuration:**
+  - Document how to update tenant-specific configuration (e.g., subdomain mapping, role definitions).
+  - Provide instructions for running the workspace locally and in production.
+
+Final Comprehensive Prompt for Copilot:
+------------------------------------------------------------
+
+Project: Minimal Viable Workspace for Multi-Portal School Management System
+
+Setup Requirements:
+1. School Portal:
+   - Next.js app in /school-portal.
+   - Contains a login/landing page for centralized authentication.
+   - On login, authenticates user against the shared-db (via Prisma) and issues a JWT.
+   - Reads tenant-specific configuration to map user roles to subdomains.
+   - Redirects user to the appropriate portal URL with the JWT passed (via query parameter or secure cookie).
+
+2. Individual Portals:
+   - Next.js apps for Admin (/admin-portal), Teacher (/teacher-portal), Accounts (/accounts-portal), and Student (/student-portal).
+   - Each app uses a boilerplate that introspects the shared-db with Prisma.
+   - Implement middleware in each app (app/middleware.ts) to validate JWT tokens received from the School Portal.
+   - Enforce role-based access controls (e.g., within the Teacher Portal, further differentiate teacher roles).
+   
+3. Docker & Deployment:
+   - Create Dockerfiles for each portal app.
+   - Use a docker-compose.yml in the root to orchestrate multi-container deployment.
+   - Pass necessary environment variables (DATABASE_URL, JWT_SECRET, SUBDOMAIN_MAPPINGS, etc.) to each container.
+   - Optionally, configure an Nginx reverse proxy container to handle subdomain routing.
+   
+4. Token Passing:
+   - On successful authentication in the School Portal, pass the JWT to the destination portal.
+   - Each destination portal validates the token and loads user-specific role-based configurations.
+   
+5. Documentation:
+   - Include instructions on updating tenant-specific settings.
+   - Document how to run the system locally and deploy in production.
+   
+Ensure the codebase remains modular, with each portal focusing on its domain logic while the School Portal handles centralized authentication and redirection. 
+
+Implement the above requirements in one commit, ensuring a minimal viable workspace setup.
 
 ------------------------------------------------------------
